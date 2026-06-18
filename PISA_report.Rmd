@@ -1,0 +1,507 @@
+---
+title: "Stats 1 PISA assignment"
+author: "Vernon Davies"
+date: "2025-02-18"
+output: html_document
+---
+
+```{r setup,include=FALSE,echo=FALSE,message=FALSE,warning=FALSE}
+knitr::opts_chunk$set(echo = FALSE,message=FALSE,warning=FALSE,comment=NA)
+library(learningtower) #this is the PISA student data package library
+library(tidyverse) #this is our standard tidyverse package that we have used many times in lectures and in the skills test
+library(ggfortify)
+library(broom)#broom cleans up the output of the multiple regression, I copied it from the stats_1 notes
+library(rmdwc)#needed for the word count tool at the bottom of the report
+ #I will set the seed at 1 so as to make my work reproducible for the marker of this assignment
+library(knitr)
+```
+
+1. The findings of this report indicate that students having a room of their own or whether a student has access to a home computer on which to do homework are the most significant factors determining math PISA score 2022 for the country of Brazil. However the significance of the variables in affecting math ability is still quite weak (in comparison to other multiple regressions I have done in the past such as skills test 2 and previous report submission with the Indonesia data). It is believed the low adjusted r squared values are a result of the data being randomly simulated.
+
+2. For this report the student 2022 Brazil data was used, initially a few variables were looked at such as does the student have their own desk ('desk')? Does the student's home have a dishwasher ('dishwasher')? Does the student have access to the internet excluding via a smartphone ('internet')? Does the student have access to a computer for school work ('computer')? Does the student have a room of their own ('room')? Also looked at was father's education level, mother's education level and the gender of the student. Info on the variables looked at can be found in the student questionnaire which accompanied the exam. The response variable chosen was math ability. Math ability is important for students in life for logic, memory and problem solving. It is also important for access to well paid software and technology positions.
+
+3. The findings of this report were based on our simulated Brazil data that was constructed to be similar to the original data.
+
+
+
+
+The PISA student data from 2022 measures numeracy, literacy and science knowledge between the age of 15 years 3 months and 16 years 2 months, when the students are enrolled in formal education. The PISA 2022 involved schools from 81 different countries representing about 29 million 15/16 year olds. Information for this report (and on PISA) was gathered via the OECD.org website and the student questionnaire which accompanies the PISA exams.
+Education is one of the most important tools in lifting children out of poverty and into a better life across the world. A thorough and varied education can mean the difference between a person ending up with better life expectancy, ending up in a well paid job, providing a better environment for their own children. Educated citizens can mean the difference between a successful economy at a macroeconomic level and a failed state. By completing secondary school, students can access tertiary education which are centers of ideas and progressiveness across cities across the world. The student experience molds young people which can affect the rest of their lives. Friendships gained at tertiary education can last students for the rest of their lives. Tertiary education contributes to making a less ignorant and more well rounded person, one who is more able to question their prejudices which can lead to a better society for all. Movements such as LGBT (lesbian gay bisexual trans) have been advanced greatly by student protests in universities across the world. 
+By measuring the performance of education, society can help educators improve their methods. Competition of schools and education systems can be healthy in the right regulatory environment. Of course the PISA tests are not the be and end all, critical thinking and the ability to discuss and debate are skills not measured in these tests. The PISA tests are still a work in progress like most things.
+This report looks specifically at the country of Brazil, a middle income country. It was thought that this country would have more of a variation in students with access internet, room, computer etc as opposed to the United Kingdom.
+This report looks at how gender, internet access at home (excluding smartphone use), the student having a room of their own, the student having access to a computer that they can use for schoolwork, the father's education level, the mother's education level. For father's and mother's education level, ISCED, means 'international standard classification of education.' There are 4 levels in the data: 'less than 1' '1' '2' and '3.'
+For further investigation I would look at other countries math ability data around the world, maybe one more developed country and one undeveloped country. Other columns could also be looked at such as 'wealth' 'book' (books owned), whether the student has access to a car at home. Other response variables such as 'science' and 'read' could also be looked at.
+
+
+
+First we will load the PISA student 2022 student data.
+
+```{r}
+
+student_data_2022<-load_student(2022)
+#https://github.com/kevinwang09/learningtower
+#from this link, which I found via a Google search (but also from Paula's email and my own previous work on the 1st Statistics assignment) we can see 2022 is the most recent year for our data, so we will use 2022.
+
+knitr::kable(head(student_data_2022))#firstly we will take a look at the data
+
+#firstly we have to cut down the data set as it has 600 thousand entries, for this study we will pick a middle income country, for that type of country there will hopefully be a good mix of student from different socioeconomic backgrounds.
+#the control variables we are interested in are 'desk' 'room' 'gender' 'internet' 'computer' 'dishwasher' (as an indicator of household wealth)
+#for this study we will pick numeracy as our response variable.
+#after a little bit of consideration, a quick look at 'developing country' page on Wikipedia, I have decided to go with Brazil as it should contain a good mix of the variables we are interested in.
+```
+
+Next we will select the country of Brazil's data. Brazil is a middle income country. The PISA country abbreviation ('BRA') was found via Googling and the result makes sense intuitively (BRA for Brazil).
+
+```{r}
+data_brazil<-student_data_2022[student_data_2022$country=='BRA',]#I copied and pasted this line of code from my previous assignment submission, obviously the code selects all the entries with 'BRA' beside them from the original 613k entry dataset (student_data_2022)
+#I Googled 'brazil student pisa dataset country name' to get the 'BRA' country abbreviation
+```
+
+Ok, so firstly we will look at the data, to get an idea of the variables involved, what research question we are going to look at, the response variable we are interested in etc.
+
+```{r}
+knitr::kable(head(data_brazil))#we can see from there are 10 thousand rows, so this data set is now much smaller and more easier to deal with
+#although another point, is there are lots of NA values for 'desk' which is one of the variables we want to use. We will have to examine this column to see if it can be still used with so many NA values.
+#we will also have to omit NA from other columns to avoid R studio throwing up errors.
+```
+
+For this report we will look at math ability, math ability is important for logic and memory and for access to tertiary education for students. 
+
+
+The second step is to look at cleaning the data:
+
+```{r}
+sum(is.na(data_brazil$desk))#this piece of code counts the number of NA values in a column, the column I have chose is the 'desk' column, the code was copied from the below StackOverflow page
+#https://stackoverflow.com/questions/24027605/determine-the-number-of-na-values-in-a-column
+#from the output we can clearly see this column is totally NA values, so it is totally useless to us
+```
+
+We can clearly see the number is NA values for the 'desk' column is huge. So we won't bother with this variable going forward.
+Next we will look at NA values for 'gender.'
+
+```{r}
+sum(is.na(data_brazil$gender))#we will do the same for gender
+#we can see the output is zero
+```
+
+We can clearly see the number of NA values are very few, so we will use 'gender' going forward.
+Now we will look at computer access (for homework) at the student's home.
+
+```{r}
+sum(is.na(data_brazil$computer))#we will now do the same for 'computer'
+#we can see the output is 707 NA values
+```
+
+There are some NA values but overall we can use this variable.
+Now we will look at internet access (excluding internet by smartphone) in the home of the student.
+
+```{r}
+sum(is.na(data_brazil$internet))#we will now do the same for 'internet'
+#the output is 682 NA values
+```
+
+We can clearly see the number of NA values are very few, so we will use 'internet' going forward.
+Now we will look at whether the student has a room of their own.
+
+```{r}
+sum(is.na(data_brazil$room))#we will now do the same for 'room'
+#the output is 549 values
+```
+
+We can clearly see there are few NA values, so we will use 'room' going forward.
+Now we will look at whether the student's home has a dishwasher. For a measure of the student's home socioeconomic status.
+
+
+```{r}
+sum(is.na(data_brazil$dishwasher))#we will now do the same for 'dishwasher'
+#the output is 10798 values, so this data column is useless to us
+```
+
+We can clearly see there are huge numbers of NA values in this column so we will not use this variable.
+
+Next we will look at father's education level. From Google ISCED means 'international standard classification of education.' From Google Gemini, ISCED 1 means primary school education, ISCED 2 means middle school education (we don't have middle school in Scotland), ISCED 3 means secondary education.
+
+
+```{r}
+sum(is.na(data_brazil$father_educ))#I Googled 'ISCED meaning' and got back 'international standard classification of education, Googling 'ISCED 1' Google Gemini said it means primary education, ISCED 2 means lower secondary education (what we in the UK call middle school), ISCED 3 means 'upper secondary education'
+```
+
+We can clearly see there are few NA values, we will use 'father_educ' going forward.
+
+Now we will look at mother's education level.
+
+```{r}
+sum(is.na(data_brazil$mother_educ))
+```
+
+So there is few NA values, and we will use this variable.
+
+Finally we will check the 'math' response variable for NA values.
+
+
+```{r}
+sum(is.na(data_brazil$math))#here we look out our column for NA values for our response variable
+```
+
+
+We can clearly see there are no NA values in the 'math' column.
+
+
+
+```{r}
+data_without_na_1<-data_brazil[!is.na(data_brazil$father_educ),]#here we omit rows containing NA values from the father's education column
+#https://stackoverflow.com/questions/11254524/omit-rows-containing-specific-column-of-na
+```
+
+
+Now we will omit all rows with NA values from the Father's education column
+
+```{r}
+knitr::kable(head(data_without_na_1))#we now look at our result
+```
+
+
+Now we will reorder the factor levels for Father's Education so they make more sense (putting 'less than ISCED 1' at the beginning rather than at the end)
+
+```{r}
+data_without_na_1$father_educ<-factor(data_without_na_1$father_educ, levels=c('less than ISCED1','ISCED 1','ISCED 2','ISCED 3A'))#the original factor level system had 'less than ISCED1' at the 4th level, I have moved it to the 1st level, which makes more sense
+#https://www.statology.org/reorder-factor-levels-in-r/
+```
+
+Now We will plot father's education level against math ability of the student (son/daughter of the father)
+
+
+```{r}
+ggplot(data_without_na_1,aes(x=father_educ,y=math))+
+  geom_point()+ggtitle('students 2022 Math results vs Father education')#this graph shows how father's education varies with math ability
+```
+
+Now we will omit the NA values from mother's education column.
+
+```{r}
+data_without_na_2<-data_without_na_1[!is.na(data_without_na_1$mother_educ),]#this cleans the mother education column of NA values
+```
+
+Now We will reorder the factor levels for mother's education as we did for father's education.
+
+```{r}
+data_without_na_2$mother_educ<-factor(data_without_na_2$mother_educ, levels=c('less than ISCED1','ISCED 1','ISCED 2','ISCED 3A'))#the original factor level system had 'less than ISCED1' at the 4th level, I have moved it to the 1st level, which makes more sense
+```
+
+Now we will plot mother's education against math ability of the student.
+
+```{r}
+ggplot(data_without_na_2,aes(x=mother_educ,y=math))+
+  geom_point()+ggtitle('students 2022 Math results vs mother education')#this graph shows how mother's education varies with math ability
+```
+
+Now we will clean the 'computer,' 'internet' and 'room' columns of NA values.
+
+```{r}
+data_without_na_3<-data_without_na_2[!is.na(data_without_na_2$computer),]#this cleans the computer column of NA values
+data_without_na_4<-data_without_na_3[!is.na(data_without_na_3$internet),]#this cleans the internet column of NA values
+data_without_na_5<-data_without_na_4[!is.na(data_without_na_4$room),]#this cleans the room column of NA values
+```
+
+Now we will check our progress, and look at the data set again.
+
+```{r}
+knitr::kable(head(data_without_na_5))#here we look at the data set so far to see how things are
+```
+
+
+```{r}
+cleaned_data_brazil<-data_without_na_5#here I just renamed the data set for convenience
+```
+
+Now we will plot the distribution of math scores:
+
+```{r}
+ggplot(cleaned_data_brazil,aes(x=math))+geom_histogram(colour='black',fill='lightgreen')+ggtitle('students 2022 Math results')#here is the histogram of the maths results for Brazil student 2022
+```
+
+Now we will look at a summary of the maths scores to check if there is a max value, we need to know this for our simulation later.
+
+```{r}
+summary(cleaned_data_brazil$math)
+```
+
+So we can see the max value is 725.1 so the max value for the maths test doesn't seem to have been reached (no student got full marks)
+
+Now we will select the columns we want to use for further analysis.
+
+```{r}
+data_brazil_edited<-select(cleaned_data_brazil,gender,computer,internet,room,father_educ,mother_educ,math)#this code selects the columns we are going to look at for our multiple regression
+```
+
+First we will plot the student's home computer access against math ability of the student.
+
+```{r}
+ggplot(data_brazil_edited,aes(x=computer,y=math))+
+  geom_point()+ggtitle('Students 2022 Math results vs does the student have a home computer ')
+#https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2022-datasets/questionnaires/COMPUTER-BASED%20STUDENT%20questionnaire%20PISA%202022.pdf
+#page 6 of the OECD.org student questionnaire 'a computer (laptop, desktop, or tablet) that you can use for school work'
+```
+
+Now we will plot internet access (excluding internet via smartphone) against math ability of the student.
+
+```{r}
+ggplot(data_brazil_edited,aes(x=internet,y=math))+
+  geom_point()+ggtitle('Students 2022 Math results vs does the student have home internet access (excluding via smartphone)')
+#there is a specific question about this in the questionnaire, and I am assuming the data set is referring to this in the 'internet' column
+```
+
+Now we will plot whether the student has a room of their own versus math ability.
+
+```{r}
+ggplot(data_brazil_edited,aes(x=room,y=math))+
+  geom_point()+ggtitle('Students 2022 Math results vs does the student have a room of their own')
+#for this one I am assuming 'room' means this as there is a specific question about this in the questionnaire, although I am not 100% sure, I think we can infer from the questions from the questionnaire plus the column name of the meaning of this variable
+#we can see the data set factor system is configured the way we want it
+```
+
+Now we will check if the math score distribution is normal or not by using a QQ plot.
+
+```{r}
+ggplot(data_brazil_edited,aes(sample=math))+geom_qq()+geom_qq_line()+ggtitle('QQ math plot')#we do this to see how much of a normal distribution our math column data is
+```
+
+
+Since the QQ plot is a reasonable enough straight line we will now look at the mean and standard deviation of the math score data.
+
+```{r}
+mean(data_brazil_edited$math)#we need the mean of math column in order to use it for our simulation in the next step
+sd(data_brazil_edited$math)#we need the standard deviation of the math column in order to use it for our simulation in the next step
+```
+
+Now we will simulate a fresh set of data for our analysis.
+
+```{r}
+set.seed(10)
+simulated_brazil<-tibble(math=rnorm(1000, mean=386,sd=77),#we will assume a normal distribution for the math column with the mean and standard deviation the same as in the original dataset
+                            gender=sample(x=c("male","female"),size=1000,replace=TRUE),#this code was taken from the skills test in Statistics in October
+                            #for gender we will use the sample tool from Intro to R tutorial, using a random selector with a sample size of 1000, obviously with replace=TRUE
+                            internet=sample(x=c(1,0),size=1000,replace=TRUE),#for internet we will use the sample tool similar to gender with 1 being yes and 0 being no, which is intuitive
+                            room=sample(x=c(1,0),size=1000,replace=TRUE),#for room we will use similar code to internet with a similar format
+                            computer=sample(x=c(1,0),size=1000,replace=TRUE),#for computer we will use similar code to internet with a similar format
+                            father_educ=sample(x=c(1,2,3,4),size=1000,replace=TRUE),#for father's education we will use the sample tool but with the numbers 1-4 to represent the different levels of education
+                            mother_educ=sample(x=c(1,2,3,4),size=1000,replace=TRUE)#for mother's education we will use the sample tool but with the numbers 1-4 to represent the different levels of education
+)
+```
+
+
+Now we will look at a summary of the math score data.
+
+```{r}
+summary(simulated_brazil$math)#this summarises the data for our math column
+
+```
+
+We can see the max value (651) isn't higher than the original Brazil math test data max value.
+
+Now we will take a look at our simulated data.
+
+```{r}
+knitr::kable(head(simulated_brazil))#we will have a look at the simulated data
+```
+
+
+Now we will look at the data type for each column.
+
+```{r}
+str(simulated_brazil)#this tells us what type of data each column is
+```
+
+Now we will turn the gender column into a factor. This is for use later with our multiple regression.
+
+```{r}
+simulated_brazil$gender<-as.factor(simulated_brazil$gender)#this turns the gender column into a factor
+#https://stackoverflow.com/questions/9251326/convert-data-frame-column-format-from-character-to-factor
+```
+
+
+Now to check the data type again to check we have successfully changed the 'gender' column into a factor.
+
+```{r}
+str(simulated_brazil)#we can see we have successfully changed the gender data to a factor
+```
+Now we can see clearly our 'gender' column is a factor, with 'male' at the 2nd level and 'female' at the first level.
+
+Now we will select the boys data from the simulation.
+
+```{r}
+boys_sim<-simulated_brazil[!grepl('female',simulated_brazil$gender),]#selecting all the male data for plotting
+#https://scales.arabpsychology.com/stats/how-do-i-drop-rows-that-contain-a-specific-string-in-r/
+girls_sim<-simulated_brazil[grepl('female',simulated_brazil$gender),] #selecting all the female data for plotting
+```
+
+Now we will plot the boy's math scores.
+
+```{r}
+ggplot(boys_sim,aes(x=math))+geom_histogram(colour='black',fill='red1')+ggtitle('boys math scores')#here we plot the boys math scores on ggplot, 
+```
+
+Now we will plot the girl's math scores.
+
+```{r}
+ggplot(girls_sim,aes(x=math))+geom_histogram(colour='black',fill='orchid1')+ggtitle('girls math scores')#here we plot the girls math scores on ggplot
+```
+
+This is the average score for boys.
+
+```{r}
+mean(boys_sim$math)
+```
+
+This is the average score for girls.
+
+```{r}
+mean(girls_sim$math)
+```
+
+Looks like boys have a higher average for Brazil for 2022 for maths.
+
+**Research Question: how does gender, a room of the student's own, internet access, access to a home computer, father's and mother's education affect math scores in the PISA 2022 student data?**
+
+First we have round 1 of the backward elimination multiple regression.
+
+```{r}
+#we will begin the multiple regression via backward elimination
+lm0<-lm(math~gender+room+internet+computer+father_educ+mother_educ,data=simulated_brazil)
+
+lm1<-lm(math~gender+room+internet+computer+father_educ,data=simulated_brazil)
+lm2<-lm(math~gender+room+internet+computer+mother_educ,data=simulated_brazil)
+lm3<-lm(math~gender+room+internet+father_educ+mother_educ,data=simulated_brazil)
+lm4<-lm(math~gender+room+computer+father_educ+mother_educ,data=simulated_brazil)
+lm5<-lm(math~gender+internet+computer+father_educ+mother_educ,data=simulated_brazil)
+lm6<-lm(math~room+internet+computer+father_educ+mother_educ,data=simulated_brazil)
+
+all_models <- list(lm0,lm1,lm2,lm3,lm4,lm5,lm6)
+
+all_models %>%
+  map_dfr(function(lm_x) {
+    # create a tibble with the bits we want
+    #this code block was taken from my skills test 2 submission which in turn was taken from the notes
+    output <- tibble(
+      call = as.character(lm_x$call)[2], # the equation
+      adj.r.squared = glance(lm_x)$adj.r.squared
+    )
+  }) %>%
+  # find the largest value
+  arrange(desc(adj.r.squared))
+
+```
+
+Round 2, now we will remove 'internet' as this gives the highest adjusted r squared value.
+
+```{r}
+
+
+lm7<-lm(math~room+computer+father_educ+mother_educ,data=simulated_brazil)
+lm8<-lm(math~gender+computer+father_educ+mother_educ,data=simulated_brazil)
+lm9<-lm(math~gender+room+father_educ+mother_educ,data=simulated_brazil)
+lm10<-lm(math~gender+room+computer+mother_educ,data=simulated_brazil)
+lm11<-lm(math~gender+room+computer+father_educ,data=simulated_brazil)
+
+all_models <- list(lm0,lm1,lm2,lm3,lm4,lm5,lm6,lm7,lm8,lm9,lm10,lm11)
+
+all_models %>%
+  map_dfr(function(lm_x) {
+    # create a tibble with the bits we want
+    #this code block was taken from my skills test 2 submission which in turn was taken from the notes
+    output <- tibble(
+      call = as.character(lm_x$call)[2], # the equation
+      adj.r.squared = glance(lm_x)$adj.r.squared
+    )
+  }) %>%
+  # find the largest value
+  arrange(desc(adj.r.squared))
+
+```
+
+Round 3 multiple regression. Now we will remove 'gender' as this gives the highest adjusted r squared value.
+
+```{r}
+
+
+lm12<-lm(math~computer+father_educ+mother_educ,data=simulated_brazil)
+lm13<-lm(math~room+father_educ+mother_educ,data=simulated_brazil)
+lm14<-lm(math~room+computer+mother_educ,data=simulated_brazil)
+lm15<-lm(math~room+computer+father_educ,data=simulated_brazil)
+
+all_models <- list(lm0,lm1,lm2,lm3,lm4,lm5,lm6,lm7,lm8,lm9,lm10,lm11,lm12,lm13,lm14,lm15)
+
+all_models %>%
+  map_dfr(function(lm_x) {
+    # create a tibble with the bits we want
+    #this code block was taken from my skills test 2 submission which in turn was taken from the notes
+    output <- tibble(
+      call = as.character(lm_x$call)[2], # the equation
+      adj.r.squared = glance(lm_x)$adj.r.squared
+    )
+  }) %>%
+  # find the largest value
+  arrange(desc(adj.r.squared))
+
+```
+
+Round 4 multiple regression, now we will remove 'mother_educ'
+
+```{r}
+
+lm16<-lm(math~computer+father_educ,data=simulated_brazil)
+lm17<-lm(math~room+father_educ,data=simulated_brazil)
+lm18<-lm(math~room+computer,data=simulated_brazil)
+
+all_models <- list(lm0,lm1,lm2,lm3,lm4,lm5,lm6,lm7,lm8,lm9,lm10,lm11,lm12,lm13,lm14,lm15,lm16,lm17,lm18)
+
+all_models %>%
+  map_dfr(function(lm_x) {
+    # create a tibble with the bits we want
+    #this code block was taken from my skills test 2 submission which in turn was taken from the notes
+    output <- tibble(
+      call = as.character(lm_x$call)[2], # the equation
+      adj.r.squared = glance(lm_x)$adj.r.squared
+    )
+  }) %>%
+  # find the largest value
+  arrange(desc(adj.r.squared))
+```
+
+Round 5 now we will remove 'father_educ.'
+
+```{r}
+lm19<-lm(math~computer,data=simulated_brazil)
+lm20<-lm(math~room,data=simulated_brazil)
+
+all_models <- list(lm0,lm1,lm2,lm3,lm4,lm5,lm6,lm7,lm8,lm9,lm10,lm11,lm12,lm13,lm14,lm15,lm16,lm17,lm18,lm19,lm20)
+
+all_models %>%
+  map_dfr(function(lm_x) {
+    # create a tibble with the bits we want
+    #this code block was taken from my skills test 2 submission which in turn was taken from the notes
+    output <- tibble(
+      call = as.character(lm_x$call)[2], # the equation
+      adj.r.squared = glance(lm_x)$adj.r.squared
+    )
+  }) %>%
+  # find the largest value
+  arrange(desc(adj.r.squared))
+```
+
+
+Since the adjusted r squared isn't getting any bigger in this round we know we have reached its peak value.
+The optimum configuration, found via backward elimination, is 'computer' plus 'room.' That is whether a student has a room of their own and whether a student has access to a home computer in which to to homework on.
+
+
+
+Here is the link to the PISA student questionnaire that accompanies the exam.
+
+https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2022-datasets/questionnaires/COMPUTER-BASED%20STUDENT%20questionnaire%20PISA%202022.pdf
+
+
+Here is a word count for this document:
+```{r }
+files<-"PISA_report.Rmd"
+rmdcount(files)
+```
